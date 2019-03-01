@@ -21,6 +21,30 @@ fi
 
 PROGUARD_HOME=`dirname "$PROGUARD"`/..
 
-# BEGIN android-changed Added -Xmx2G for Mac builds
-java -Xmx2G -jar "$PROGUARD_HOME/lib/proguard.jar" "$@"
-# END android-changed
+# By default, give dx a max heap size of 2 gig. This can be overridden
+# by using a "-J" option (see below).
+defaultMx="-Xmx2G"
+
+# The following will extract any initial parameters of the form
+# "-J<stuff>" from the command line and pass them to the Java
+# invocation (instead of to dx). This makes it possible for you to add
+# a command-line parameter such as "-JXmx256M" in your scripts, for
+# example. "java" (with no args) and "java -X" give a summary of
+# available options.
+
+javaOpts=""
+
+while expr "x$1" : 'x-J' >/dev/null; do
+    opt=`expr "x$1" : 'x-J\(.*\)'`
+    javaOpts="${javaOpts} -${opt}"
+    if expr "x${opt}" : "xXmx[0-9]" >/dev/null; then
+        defaultMx="no"
+    fi
+    shift
+done
+
+if [ "${defaultMx}" != "no" ]; then
+    javaOpts="${javaOpts} ${defaultMx}"
+fi
+
+exec java $javaOpts -jar "$PROGUARD_HOME/lib/proguard.jar" "$@"
